@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Juegos de diferencias</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fffaf0;--fg:#1d2733;--card:#fff;--bd:#2b4a6f;--ok:#1b8a3a;--btn:#2b4a6f;--btnfg:#fff;--sel:#1b8a3a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181f;--fg:#f2f4f7;--card:#1e242d;--bd:#8fb4e3;--ok:#4cd27a;--btn:#8fb4e3;--btnfg:#10161d;--sel:#4cd27a}}
+:root[data-theme="dark"]{--bg:#14181f;--fg:#f2f4f7;--card:#1e242d;--bd:#8fb4e3;--ok:#4cd27a;--btn:#8fb4e3;--btnfg:#10161d;--sel:#4cd27a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Verdana,Arial,sans-serif;text-align:center;padding:16px}
+h1{font-size:clamp(1.6rem,4vw,2.4rem);margin:8px 0}
+p.i{font-size:clamp(1.1rem,2.5vw,1.5rem);margin:4px 0 12px}
+.bar{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin:10px 0}
+.count{font-size:clamp(1.5rem,3.5vw,2.2rem);font-weight:bold;padding:8px 22px;border:4px solid var(--bd);border-radius:16px;background:var(--card)}
+button{font:inherit;font-size:1.3rem;font-weight:bold;padding:14px 26px;border:4px solid transparent;border-radius:14px;background:var(--btn);color:var(--btnfg);cursor:pointer;min-height:56px}
+button[aria-pressed="true"]{background:var(--card);color:var(--fg);border-color:var(--sel)}
+button:focus-visible{outline:4px solid var(--ok);outline-offset:3px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1300px;margin:0 auto}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:5px solid var(--bd);border-radius:18px;padding:6px}
+.card h2{margin:4px;font-size:1.3rem}
+svg{width:100%;height:auto;display:block;border-radius:10px;cursor:pointer;touch-action:manipulation}
+#msg{font-size:clamp(1.3rem,3vw,2rem);font-weight:bold;min-height:2.4em;margin:12px 0}
+.win{color:var(--ok)}
+@keyframes p{50%{opacity:.2}}.pulse{animation:p .8s 6}
+</style></head><body>
+<h1>🔎 Juegos de diferencias</h1>
+<p class="i">Elige un juego y toca el lugar donde veas una diferencia.</p>
+<div class="bar" id="tabs"></div>
+<div class="bar"><div class="count" id="cnt"></div>
+<button id="hint">💡 Ayuda</button><button id="reset">🔄 Empezar de nuevo</button></div>
+<div id="msg" role="status" aria-live="polite"></div>
+<div class="grid">
+<div class="card"><h2>Imagen 1</h2><svg id="a" viewBox="0 0 600 400" role="img" aria-label="Imagen original"></svg></div>
+<div class="card"><h2>Imagen 2</h2><svg id="b" viewBox="0 0 600 400" role="img" aria-label="Imagen con diferencias"></svg></div>
+</div>
+<script>
+const P=(pts,f)=>'<polygon points="'+pts+'" fill="'+f+'"/>';
+const SC=[
+{n:'🏡 El jardín',
+D:[{x:150,y:60,r:50},{x:315,y:130,r:55},{x:322,y:265,r:30},{x:265,y:215,r:30},{x:385,y:75,r:32},{x:100,y:185,r:26},{x:330,y:45,r:30},{x:470,y:335,r:34},{x:535,y:355,r:26},{x:440,y:235,r:32}],
+f(m){let s='<rect width="600" height="400" fill="#9fd8f5"/><rect y="270" width="600" height="130" fill="#6fbf4a"/><circle cx="535" cy="60" r="38" fill="#ffd93b"/>';
+if(!m)s+='<g fill="#fff"><ellipse cx="150" cy="65" rx="55" ry="24"/><ellipse cx="120" cy="52" rx="32" ry="22"/><ellipse cx="180" cy="50" rx="34" ry="24"/></g><path d="M310 50 q10 -16 20 0 q10 -16 20 0" stroke="#222" stroke-width="5" fill="none"/>';
+s+='<rect x="370" y="105" width="28" height="55" fill="#8b4a2b"/>';
+if(!m)s+='<g fill="#e8e8e8"><circle cx="385" cy="90" r="12"/><circle cx="395" cy="68" r="15"/></g>';
+s+='<rect x="230" y="170" width="170" height="130" fill="#f5d28a" stroke="#6b4a1e" stroke-width="4"/><polygon points="212,172 315,98 418,172" fill="'+(m?'#2f5fb3':'#d93a2b')+'" stroke="#6b4a1e" stroke-width="4"/>';
+s+='<rect x="300" y="230" width="46" height="70" fill="'+(m?'#2e8b3d':'#7a4a22')+'"/><circle cx="337" cy="268" r="4" fill="#ffd93b"/>';
+s+='<rect x="245" y="195" width="42" height="42" fill="'+(m?'#ffe066':'#bfe6ff')+'" stroke="#6b4a1e" stroke-width="4"/><path d="M266 195v42M245 216h42" stroke="#6b4a1e" stroke-width="3"/><rect x="355" y="205" width="30" height="30" fill="#bfe6ff" stroke="#6b4a1e" stroke-width="4"/>';
+s+='<rect x="88" y="190" width="26" height="112" fill="#7a4a22"/><circle cx="101" cy="150" r="62" fill="#2e8b3d"/><g fill="#e53935" stroke="#7a1010" stroke-width="2"><circle cx="75" cy="140" r="11"/><circle cx="122" cy="130" r="11"/>'+(m?'':'<circle cx="100" cy="185" r="11"/>')+'</g>';
+const pc=m?'#8e44ad':'#e53935';
+[[470,300],[470,340],[450,320],[490,320]].forEach(p=>s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="11" fill="'+pc+'"/>');
+s+='<circle cx="470" cy="320" r="8" fill="#ffd93b"/><path d="M470 340v40" stroke="#2a6b1f" stroke-width="5"/>';
+if(!m)s+='<circle cx="535" cy="355" r="16" fill="#e53935" stroke="#7a1010" stroke-width="3"/>';
+if(m)s+='<ellipse cx="428" cy="232" rx="14" ry="10" fill="#ff9800"/><ellipse cx="452" cy="232" rx="14" ry="10" fill="#ff9800"/><rect x="438" y="222" width="4" height="22" fill="#333"/>';
+return s+'<path d="M300 300 q-30 50 -80 100 h120 q-20 -50 -10 -100z" fill="#d9c38c"/>';}},
+
+{n:'🐄 La granja',
+D:[{x:110,y:60,r:50},{x:175,y:215,r:32},{x:250,y:225,r:38},{x:250,y:62,r:26},{x:455,y:300,r:22},{x:128,y:297,r:26},{x:560,y:200,r:34},{x:281,y:340,r:32},{x:362,y:342,r:26},{x:77,y:280,r:22}],
+f(m){let s='<rect width="600" height="400" fill="#a8defa"/><rect y="250" width="600" height="150" fill="#7cc24f"/><circle cx="520" cy="55" r="36" fill="#ffd93b"/>';
+if(!m)s+='<g fill="#fff"><ellipse cx="110" cy="62" rx="52" ry="22"/><ellipse cx="85" cy="50" rx="28" ry="20"/><ellipse cx="135" cy="48" rx="30" ry="22"/></g>';
+s+='<rect x="150" y="130" width="200" height="130" fill="'+(m?'#e67e22':'#c0392b')+'" stroke="#5a2a12" stroke-width="4"/><polygon points="135,135 250,70 365,135" fill="#6d4c41"/>';
+s+='<rect x="215" y="190" width="70" height="70" fill="#f5e6d3" stroke="#5a2a12" stroke-width="4"/>';
+if(!m)s+='<path d="M215 190L285 260M285 190L215 260" stroke="#5a2a12" stroke-width="5"/><ellipse cx="250" cy="62" rx="14" ry="10" fill="#222"/><circle cx="262" cy="50" r="6" fill="#222"/><path d="M262 42l4-8 4 8z" fill="#e53935"/>';
+s+='<rect x="15" y="272" width="125" height="6" fill="#8d6e63"/><rect x="15" y="290" width="125" height="6" fill="#8d6e63"/>';
+[20,45,70,95,120].forEach(x=>{if(!(m&&x==70))s+='<rect x="'+x+'" y="262" width="14" height="38" fill="#fff" stroke="#8d6e63" stroke-width="3"/>';});
+s+='<ellipse cx="90" cy="322" rx="42" ry="26" fill="#f8a5b8"/><circle cx="128" cy="316" r="17" fill="#f8a5b8"/><ellipse cx="143" cy="320" rx="7" ry="6" fill="#f27b9a"/><rect x="62" y="340" width="10" height="20" fill="#f27b9a"/><rect x="100" y="340" width="10" height="20" fill="#f27b9a"/><circle cx="125" cy="311" r="2.5" fill="#222"/>';
+if(m)s+='<rect x="116" y="291" width="26" height="12" fill="#e53935"/><rect x="110" y="301" width="38" height="5" fill="#e53935"/>';
+s+='<ellipse cx="450" cy="315" rx="58" ry="30" fill="#fff" stroke="#333" stroke-width="3"/><circle cx="515" cy="300" r="19" fill="#fff" stroke="#333" stroke-width="3"/><rect x="410" y="335" width="10" height="30" fill="#fff" stroke="#333" stroke-width="2"/><rect x="480" y="335" width="10" height="30" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="430" cy="308" r="13" fill="#222"/><circle cx="472" cy="326" r="12" fill="#222"/><circle cx="520" cy="296" r="3" fill="#222"/>';
+if(!m)s+='<circle cx="455" cy="298" r="11" fill="#222"/>';
+s+='<rect x="557" y="215" width="6" height="55" fill="#2a6b1f"/>';
+for(let i=0;i<8;i++){const a=i*Math.PI/4;s+='<circle cx="'+(560+Math.cos(a)*20).toFixed(1)+'" cy="'+(200+Math.sin(a)*20).toFixed(1)+'" r="9" fill="'+(m?'#e53935':'#ffd93b')+'"/>';}
+s+='<circle cx="560" cy="200" r="12" fill="#6d4c41"/>';
+if(!m)s+='<rect x="250" y="322" width="62" height="36" fill="#e6c34a" stroke="#9a7b12" stroke-width="3"/><path d="M250 340h62" stroke="#9a7b12" stroke-width="3"/>';
+if(m)s+='<ellipse cx="360" cy="345" rx="16" ry="12" fill="#fff" stroke="#999" stroke-width="2"/><circle cx="374" cy="334" r="7" fill="#fff" stroke="#999" stroke-width="2"/><path d="M380 334l8 2-8 3z" fill="#ff9800"/><circle cx="372" cy="326" r="4" fill="#e53935"/>';
+return s;}},
+
+{n:'🏖️ La playa',
+D:[{x:200,y:65,r:32},{x:445,y:215,r:32},{x:130,y:250,r:48},{x:60,y:365,r:28},{x:300,y:370,r:30},{x:475,y:290,r:22},{x:390,y:355,r:26},{x:520,y:56,r:30},{x:235,y:341,r:40},{x:560,y:365,r:28}],
+f(m){let s='<rect width="600" height="400" fill="#a8defa"/><rect y="195" width="600" height="100" fill="#2f9fd8"/><rect y="290" width="600" height="110" fill="#f3d9a0"/><circle cx="520" cy="60" r="36" fill="#ffd93b"/>';
+if(m)s+='<rect x="499" y="50" width="18" height="13" fill="#222"/><rect x="523" y="50" width="18" height="13" fill="#222"/><path d="M517 55h6" stroke="#222" stroke-width="3"/>';
+if(!m)s+='<path d="M180 70 q10 -16 20 0 q10 -16 20 0" stroke="#222" stroke-width="5" fill="none"/>';
+s+='<path d="M20 225q15-10 30 0t30 0M250 270q15-10 30 0t30 0M520 235q15-10 30 0t30 0" stroke="#fff" stroke-width="4" fill="none"/>';
+s+='<path d="M385 235h80l-12 18h-56z" fill="#8d5524"/><rect x="423" y="170" width="4" height="65" fill="#5a3a1a"/>'+P('427,175 427,230 475,230',m?'#ffd93b':'#e53935');
+s+='<rect x="127" y="265" width="6" height="72" fill="#795548"/><path d="M72 275A58 58 0 0 1 188 275Z" fill="'+(m?'#2f6fd8':'#e53935')+'"/><path d="M130 217L100 275H160Z" fill="#fff" opacity=".85"/>';
+s+='<rect x="185" y="325" width="100" height="32" fill="'+(m?'#7bd88f':'#ff8fb1')+'" stroke="#fff" stroke-width="3"/><path d="M215 325v32M255 325v32" stroke="#fff" stroke-width="4"/>';
+if(m)s+=P('60,343 65,358 81,358 68,367 73,383 60,373 47,383 52,367 39,358 55,358','#ff9800');
+if(!m)s+='<ellipse cx="300" cy="372" rx="22" ry="14" fill="#e53935"/><circle cx="272" cy="360" r="7" fill="#e53935"/><circle cx="328" cy="360" r="7" fill="#e53935"/><circle cx="292" cy="362" r="3" fill="#222"/><circle cx="308" cy="362" r="3" fill="#222"/>';
+s+='<g fill="#d9b26f" stroke="#a9843f" stroke-width="2"><rect x="440" y="325" width="64" height="42"/><rect x="436" y="310" width="18" height="20"/><rect x="490" y="310" width="18" height="20"/><rect x="462" y="300" width="20" height="25"/></g>';
+if(!m)s+='<path d="M472 282v18" stroke="#333" stroke-width="3"/>'+P('472,282 490,288 472,294','#e53935');
+s+='<polygon points="375,340 405,340 400,368 380,368" fill="'+(m?'#43a047':'#ffd93b')+'"/><path d="M378 341q12-22 24 0" stroke="#555" stroke-width="3" fill="none"/>';
+if(!m)s+='<circle cx="560" cy="365" r="20" fill="#fff" stroke="#333" stroke-width="2"/><path d="M560 345A20 20 0 0 1 580 365L560 365Z" fill="#e53935"/><path d="M540 365A20 20 0 0 1 560 345L560 365Z" fill="#2f6fd8"/>';
+return s;}}
+];
+const A=document.getElementById('a'),B=document.getElementById('b'),M=document.getElementById('msg'),T=document.getElementById('tabs');
+let cur=0,found=new Set();
+SC.forEach((c,i)=>{const b=document.createElement('button');b.textContent=c.n;b.onclick=()=>{cur=i;draw();};T.appendChild(b);});
+function draw(){found=new Set();A.innerHTML=SC[cur].f(false)+'<g class="ov"></g>';B.innerHTML=SC[cur].f(true)+'<g class="ov"></g>';
+[...T.children].forEach((b,i)=>b.setAttribute('aria-pressed',i==cur));upd();M.textContent='';M.className='';}
+function upd(){document.getElementById('cnt').textContent='Encontradas: '+found.size+' de 10';}
+function mk(t,o){const e=document.createElementNS('http://www.w3.org/2000/svg',t);for(const k in o)e.setAttribute(k,o[k]);return e;}
+function mark(i,hint){[A,B].forEach(sv=>{const d=SC[cur].D[i];
+const c=mk('circle',{cx:d.x,cy:d.y,r:d.r*0.9,fill:'none',stroke:hint?'#ff9800':'#1fae4b','stroke-width':8});
+if(hint)c.setAttribute('class','pulse');sv.querySelector('.ov').appendChild(c);if(hint)setTimeout(()=>c.remove(),5000);});}
+function click(e,sv){const D=SC[cur].D,r=sv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*600,y=(e.clientY-r.top)/r.height*400;
+const i=D.findIndex((d,k)=>!found.has(k)&&Math.hypot(d.x-x,d.y-y)<=d.r);
+if(i>=0){found.add(i);mark(i);upd();M.className='win';
+M.textContent=found.size==10?'🎉 ¡Enhorabuena! ¡Las has encontrado todas!':'✅ ¡Muy bien! Esa es una diferencia.';}
+else{const t=mk('text',{x:x,y:y+18,'text-anchor':'middle','font-size':52,fill:'#d32f2f'});t.textContent='✖';
+sv.querySelector('.ov').appendChild(t);setTimeout(()=>t.remove(),700);M.className='';M.textContent='Aquí no hay diferencia. ¡Inténtalo otra vez!';}}
+A.addEventListener('click',e=>click(e,A));B.addEventListener('click',e=>click(e,B));
+document.getElementById('hint').onclick=()=>{const i=SC[cur].D.findIndex((d,k)=>!found.has(k));if(i>=0)mark(i,true);};
+document.getElementById('reset').onclick=draw;
+draw();
+</script></body></html>
